@@ -1,0 +1,177 @@
+li a7, 1
+li a1, 15
+li a2, -5
+li a3,  5
+
+
+
+add a4, a1, a2 
+sub a5, a1, a3 # expected- a4=a5=10
+addi a6, a6, 0 #test with no stall
+beq a5, a4, valid0  #tested- add,addi,sub,beq,jal
+jal error
+valid0: auipc a4 1
+lui a5 1
+addi a5, a5, 36 # expected- a4=a5=4128
+beq a5, a4, valid1  #tested- lui,auipc
+jal error
+valid1: li a0, 0xc
+and a2, a1, a0
+or a3, a1, a0
+xor a5, a3, a4 # expected- a2=a5=8
+beq a2, a5, valid2  #tested- and,or,xor
+jal error
+valid2: andi a2, a0, 0xa
+ori a3, a0, 0xa
+xori a5, a3, 0x6 # expected- a2=a5=8
+beq a2, a5, valid3  #tested- andi,ori,xori
+jal error
+valid3: li a0, 1
+slt a2, a0, a1
+sltu a3, a0, a1
+addi a2, a2, 1 # expected- a2=a3=1
+beq a2, a3, valid4  #tested- slt,sltu
+jal error
+valid4: slti a2, a0, -1
+sltiu a3, a0, -1
+addi a2, a2, 1 # expected- a2=a3=1
+beq a2, a3, valid5  #tested- slti,sltiu
+jal error
+valid5: li a1, 2
+sll a2, a0, a1
+srl a2, a2, a0
+slli a3, a0, 2
+srli a3, a3, 1 # expected- a2=a3=2
+beq a2, a3, valid6  #tested- sll,srl,slli,srli
+jal error
+valid6: li a0, -8
+srai a2, a0, 2
+sra a3, a0, a4 # expected- a2=a3=-2
+beq a2, a3, valid7  #tested- sra,srai
+jal error
+valid7: jal procedure # expected- a5=a6=69
+beq a5, a6, valid8  #tested- jal,jalr
+jal error
+valid8: addi a6, a6, 1 # expected- a5=70 a6=69
+bne a5, a6, valid9  #tested- bne
+jal error
+valid9: li a6 -1 # expected- a5=69 a6=-1 (for next 4 branches)
+bgt a5, a6, valid10  #tested- gt
+jal error
+valid10: bltu a5, a6, valid11  #tested- ltu
+jal error
+valid11: bgeu a6, a5, valid12  #tested- ltu
+jal error
+valid12: blt a6, a5, valid13  #tested- ltu
+jal error
+valid13: bltu a6, a5, error  #tested- ltu
+jal exit
+procedure:
+jalr x1  #return
+error:li a7,-1 
+exit: nop
+# Instrukcije rade   			 : U a7/X17 se nalazi 1
+# Neka od instrukcija ne radi: U a7/X17 se nalazi -1
+sw a0, 0(x0) # forward from mem to ex 
+lw a1, 0(x0)
+add a2, a1, a0 # [load,Rtype] -> stall 1CC + forward from wb to ex
+bne a0, a2, valid # [Rtype,branch] -> stall 1CC + forward from MEM to ID + flush IF/ID reg on branch taken
+jal error
+valid: jal procedure # [jal] -> IF/ID flush
+nop
+add a4, a2, a3 #[Rtype,nop,Rtype] forward result from WB to EX 
+nop
+nop
+bne a2, a4, exit #[Rtype,nop,nop,branch] forward result from WB to ID
+error1:
+procedure1:jalr x1 # jalr instruction -> IF/ID and 
+jal error # jump after jalr -> possible hazard! 2 simultanious jumps, jump in ID and JALR in EX
+jal error
+exitt: nop
+li a0, 0x04038101 # Smulator has a bug and loads 0x04039101 = 67342593
+sw a0, 0(x0)#expected values
+lw a1, 0(x0)#67342593
+lh a2, 0(x0)#-28415
+lh a3, 2(x0)#1027
+lb a4, 0(x0)#1
+lb a5, 1(x0)#-111
+lb a6, 2(x0)#3
+lb a7, 3(x0)#4
+lhu a2, 0(x0)#37129
+lhu a3, 2(x0)#1027
+lbu a4, 0(x0)#1
+lbu a5, 1(x0)#145
+lbu a6, 2(x0)#3
+lbu a7, 3(x0)#4
+sh a2, 4(x0)
+sh a3, 6(x0)# 2*sh =sw
+sb a4, 8(x0)
+sb a5, 9(x0)
+sb a6, 10(x0)
+sb a7, 11(x0)# 4*sb =sw
+beq a0,a1, valid
+jal error
+validd: jal exit 
+errorr: li a0 -1
+exittt: nop
+label:
+ADDI x4, x5, 10
+SUB x6, x7, x8
+LUI x9, 0x1000
+AUIPC x10, 0x2000
+LB x11, 8(x12)
+LBU x13, 12(x14)
+LH x15, 16(x16)
+LHU x17, 20(x18)
+LW x19, 24(x20)
+SB x21, 28(x22)
+SH x23, 32(x24)
+SW x25, 36(x26)
+SLL x27, x28, x29
+SLLI x1, x2, 5
+SRL x3, x4, x5
+SRLI x6, x7, 3
+SRA x8, x9, x10
+SRAI x11, x12, 2
+XOR x13, x14, x15
+XORI x16, x17, 0xFF
+OR x18, x19, x20
+ORI x21, x22, 0xAB
+ANDI x26, x27, 0x0F
+SLT x28, x29, x30
+SLTI x1, x2, 100
+SLTU x3, x4, x5
+SLTIU x6, x7, 200
+BEQ x8, x9, label
+BNE x10, x11, label
+ADDI x4, x5, 10
+BLT x12, x13, label
+ADDI x4, x5, 10
+ADD zero zero zero
+BGE x14, x15, label
+label5:
+add x0 x0 x0
+label2:
+add x0, x0, x0
+SRLI x6, x7, 3
+sub x0 x0 x0
+label1:
+add x0, x0, x0
+SLTIU x6, x7, 200
+BEQ x8, x9, label
+BNE x10, x11, label1
+add x0 x0 x0
+add x0 x0 x0
+BLT x12, x13, label5
+sub x0, x0, x0
+BGE x14, x15, label4
+add x0, x0, x0
+BLTU x16, x17, label
+JAL x1, label
+sub x0 x0 x0
+JAL label2
+JALR x1, x2, 8
+BGEU x18, x19, label2
+label6:
+label7:
+label4:
